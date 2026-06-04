@@ -14,7 +14,7 @@ GTA V / FiveM の RAGE エンジンバイナリファイルをブラウザ上で
 | `.ymap` | Map Data | エンティティ一覧テーブル、2D ミニマップ、検索・ソート |
 | `.ytyp` | Type Data | アーキタイプ定義テーブル、詳細メタデータ |
 | `.ymt` | Meta Data | フィールドテーブル、XML ビュー |
-| `.rpf` | RPF Archive | ディレクトリツリー、ネスト RPF 展開、ファイルプレビュー、ZIP 一括ダウンロード |
+| `.rpf` | RPF Archive | ディレクトリツリー、ネスト RPF 展開、ファイルプレビュー、ZIP 一括ダウンロード、FiveM リソース ZIP 出力 |
 
 ## テクスチャデコード対応
 
@@ -56,14 +56,22 @@ pnpm preview  # ビルド結果をプレビュー
 - YMAP/YTYP のバイナリ (PSO) 形式はヒューリスティック解析のため、一部データが欠落する場合あり
 - FiveM で一般的な XML 形式の YMAP/YTYP は完全サポート
 
-## WIP fivemリソースに展開するボタンの追加
-現状zipでDLすることは出来るが、そのままfivemにいれれる形になっていない。fxmanifest.luaや、データ構造の問題がある。
-構造として
-resource
-/stream
-/data
-fxmanifest.lua
-という形にしたい。
+## FiveM リソース ZIP 出力
+
+RPF ビューアの `Download FiveM Resource` ボタンから、FiveM にそのまま配置しやすい ZIP を出力できます。
+出力 ZIP は以下の構造になります。
+
+```text
+resource_name/
+├── stream/
+├── data/
+└── fxmanifest.lua
+```
+
+- `.ytd` / `.ydr` / `.ybn` / `.ymap` / `.ytyp` などのストリーミングアセットは、元の `x64/` などの階層を外して `stream/` 直下に配置
+- `.meta` / `.xml` / `.dat` / `.rel` / `.ymt` は `data/` に配置
+- `handling.meta` / `vehicles.meta` / `carcols.meta` / `carvariations.meta` / `.ytyp` などは `fxmanifest.lua` に代表的な `data_file` 宣言を自動追加
+- FiveM リソースとしてそのまま読み込まれない `global.gxt2` などの `.gxt2` ファイルは除外
 
 ## ライセンス
 
