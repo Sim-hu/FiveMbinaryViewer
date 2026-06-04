@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { zipSync } from "fflate";
 import { extractAllFiles } from "../lib/rpf-parser";
+import { buildFiveMResourceFiles } from "../lib/fivem-resource";
 import type { ParsedRPF, RPFEntry } from "../lib/types";
 
 interface RPFViewerProps {
@@ -64,6 +65,17 @@ export function RPFViewer({ data, fileName }: RPFViewerProps) {
     [allFilesRef],
   );
 
+  function downloadZip(zipInput: Record<string, Uint8Array>, downloadName: string) {
+    const zipped = zipSync(zipInput);
+    const blob = new Blob([zipped as Uint8Array<ArrayBuffer>], { type: "application/zip" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = downloadName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // ZIP ダウンロード
   const handleDownloadZip = useCallback(async () => {
     if (!allFilesRef) return;
@@ -77,16 +89,34 @@ export function RPFViewer({ data, fileName }: RPFViewerProps) {
         zipInput[path] = fileData;
       }
 
-      const zipped = zipSync(zipInput);
-      const blob = new Blob([zipped as Uint8Array<ArrayBuffer>], { type: "application/zip" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName.replace(/\.rpf$/i, "") + ".zip";
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadZip(zipInput, fileName.replace(/\.rpf$/i, "") + ".zip");
     } catch (e) {
       console.error("ZIP creation failed:", e);
+    } finally {
+      setDownloading(false);
+    }
+  }, [allFilesRef, fileName]);
+
+  // FiveM リソース ZIP ダウンロード
+  const handleDownloadFiveMResource = useCallback(async () => {
+    if (!allFilesRef) return;
+    setDownloading(true);
+
+    try {
+      await new Promise((r) => setTimeout(r, 0));
+
+      const resource = buildFiveMResourceFiles(allFilesRef, fileName);
+      const zipInput: Record<string, Uint8Array> = {
+        [`${resource.rootName}/fxmanifest.lua`]: new TextEncoder().encode(resource.manifest),
+      };
+
+      for (const file of resource.files) {
+        zipInput[`${resource.rootName}/${file.resourcePath}`] = file.data;
+      }
+
+      downloadZip(zipInput, `${resource.rootName}_fivem_resource.zip`);
+    } catch (e) {
+      console.error("FiveM resource creation failed:", e);
     } finally {
       setDownloading(false);
     }
@@ -117,13 +147,23 @@ export function RPFViewer({ data, fileName }: RPFViewerProps) {
           Expand All
         </button>
         {allFilesRef && (
-          <button
-            onClick={handleDownloadZip}
-            disabled={downloading}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-          >
-            {downloading ? "Creating..." : "Download ZIP"}
-          </button>
+          <>
+            <button
+              onClick={handleDownloadZip}
+              disabled={downloading}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+            >
+              {downloading ? "Creating..." : "Download ZIP"}
+            </button>
+            <button
+              onClick={handleDownloadFiveMResource}
+              disabled={downloading}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+              title="fxmanifest.lua と stream/data フォルダを含む FiveM リソース ZIP を作成"
+            >
+              {downloading ? "Creating..." : "Download FiveM Resource"}
+            </button>
+          </>
         )}
       </div>
 
