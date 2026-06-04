@@ -56,6 +56,15 @@ pnpm preview  # ビルド結果をプレビュー
 - YMAP/YTYP のバイナリ (PSO) 形式はヒューリスティック解析のため、一部データが欠落する場合あり
 - FiveM で一般的な XML 形式の YMAP/YTYP は完全サポート
 
+## WIP fivemリソースに展開するボタンの追加
+現状zipでDLすることは出来るが、そのままfivemにいれれる形になっていない。fxmanifest.luaや、データ構造の問題がある。
+構造として
+resource
+/stream
+/data
+fxmanifest.lua
+という形にしたい。
+
 ## ライセンス
 
 MIT
