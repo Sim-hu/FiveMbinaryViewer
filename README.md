@@ -68,9 +68,10 @@ resource_name/
 └── fxmanifest.lua
 ```
 
-- `.ytd` / `.ydr` / `.ybn` / `.ymap` / `.ytyp` などのストリーミングアセットは `stream/` に配置
+- `.ytd` / `.ydr` / `.ybn` / `.ymap` / `.ytyp` などのストリーミングアセットは、元の `x64/` などの階層を外して `stream/` 直下に配置
 - `.meta` / `.xml` / `.dat` / `.rel` / `.ymt` は `data/` に配置
 - `handling.meta` / `vehicles.meta` / `carcols.meta` / `carvariations.meta` / `.ytyp` などは `fxmanifest.lua` に代表的な `data_file` 宣言を自動追加
+- FiveM リソースとしてそのまま読み込まれない `global.gxt2` などの `.gxt2` ファイルは除外
 
 ## ライセンス
 

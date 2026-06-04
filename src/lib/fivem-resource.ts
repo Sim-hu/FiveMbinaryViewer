@@ -17,6 +17,10 @@ const DATA_EXTENSIONS = new Set([
   "xml",
 ]);
 
+const EXCLUDED_EXTENSIONS = new Set([
+  "gxt2",
+]);
+
 const META_DATA_FILE_TYPES: Array<{ pattern: RegExp; type: string }> = [
   { pattern: /(^|\/)handling\.meta$/i, type: "HANDLING_FILE" },
   { pattern: /(^|\/)vehicles\.meta$/i, type: "VEHICLE_METADATA_FILE" },
@@ -50,14 +54,20 @@ export function buildFiveMResourceFiles(
 ): FiveMResourceBuildResult {
   const rootName = sanitizeResourceName(sourceFileName.replace(/\.rpf$/i, ""));
   const files: FiveMResourceFile[] = [];
+  const usedResourcePaths = new Set<string>();
 
   for (const [sourcePath, data] of sourceFiles) {
     const normalizedPath = normalizeArchivePath(sourcePath);
-    if (!normalizedPath) continue;
+    if (!normalizedPath || shouldExcludeFromResource(normalizedPath)) continue;
+
+    const resourcePath = getUniqueResourcePath(
+      getFiveMResourcePath(normalizedPath),
+      usedResourcePaths,
+    );
 
     files.push({
       sourcePath: normalizedPath,
-      resourcePath: getFiveMResourcePath(normalizedPath),
+      resourcePath,
       data,
     });
   }
@@ -91,15 +101,51 @@ function normalizeArchivePath(path: string): string {
     .join("/");
 }
 
-function getFiveMResourcePath(path: string): string {
-  const parts = path.toLowerCase().split("/");
-  const first = parts[0];
-  if (first === "data" || first === "stream") return path;
+function shouldExcludeFromResource(path: string): boolean {
+  return EXCLUDED_EXTENSIONS.has(getExtension(path));
+}
 
-  const ext = path.split(".").pop()?.toLowerCase() ?? "";
-  if (STREAM_EXTENSIONS.has(ext)) return `stream/${path}`;
+function getFiveMResourcePath(path: string): string {
+  const first = path.toLowerCase().split("/")[0];
+  const ext = getExtension(path);
+
+  if (STREAM_EXTENSIONS.has(ext)) return `stream/${getBaseName(path)}`;
+  if (first === "data") return path;
   if (DATA_EXTENSIONS.has(ext)) return `data/${path}`;
-  return `stream/${path}`;
+  if (first === "stream") return `stream/${getBaseName(path)}`;
+  return `stream/${getBaseName(path)}`;
+}
+
+function getUniqueResourcePath(path: string, usedPaths: Set<string>): string {
+  if (!usedPaths.has(path)) {
+    usedPaths.add(path);
+    return path;
+  }
+
+  const slashIndex = path.lastIndexOf("/");
+  const folder = slashIndex >= 0 ? path.slice(0, slashIndex + 1) : "";
+  const fileName = slashIndex >= 0 ? path.slice(slashIndex + 1) : path;
+  const dotIndex = fileName.lastIndexOf(".");
+  const name = dotIndex >= 0 ? fileName.slice(0, dotIndex) : fileName;
+  const extension = dotIndex >= 0 ? fileName.slice(dotIndex) : "";
+
+  let index = 2;
+  let candidate = `${folder}${name}_${index}${extension}`;
+  while (usedPaths.has(candidate)) {
+    index++;
+    candidate = `${folder}${name}_${index}${extension}`;
+  }
+
+  usedPaths.add(candidate);
+  return candidate;
+}
+
+function getExtension(path: string): string {
+  return path.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function getBaseName(path: string): string {
+  return path.split("/").pop() ?? path;
 }
 
 function createFxManifest(files: FiveMResourceFile[]): string {
