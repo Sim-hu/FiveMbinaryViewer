@@ -41,17 +41,22 @@ function parseFileEntry(data: Uint8Array, view: DataView, off: number): FileData
   const isResource = (b[7]! & 0x80) !== 0;
   const blockOffset = b[5]! | (b[6]! << 8) | ((b[7]! & 0x7f) << 16);
   const byteOffset = blockOffset * 512;
+  // bytes[2:4] = ディスク上の実サイズ (FileSize, 24bit)
+  const onDiskSize = b[2]! | (b[3]! << 8) | (b[4]! << 16);
 
   if (isResource) {
+    // リソースはディスク上に「RSC7ヘッダー(16B) + deflate圧縮データ」がそのまま
+    // onDiskSize バイト格納されている。これがそのまま単体ファイルになる。
+    // uncompressedSize は展開後のメモリ上サイズ（表示用の概算）。
     const systemFlags = view.getUint32(off + 8, true);
     const graphicsFlags = view.getUint32(off + 12, true);
-    const size = getResourcePageSize(systemFlags) + getResourcePageSize(graphicsFlags) + 16;
-    return { byteOffset, compressedSize: 0, uncompressedSize: size, isResource: true };
+    const uncompressedSize =
+      getResourcePageSize(systemFlags) + getResourcePageSize(graphicsFlags) + 16;
+    return { byteOffset, compressedSize: onDiskSize, uncompressedSize, isResource: true };
   }
 
-  const compressedSize = b[2]! | (b[3]! << 8) | (b[4]! << 16);
   const uncompressedSize = view.getUint32(off + 8, true);
-  return { byteOffset, compressedSize, uncompressedSize, isResource: false };
+  return { byteOffset, compressedSize: onDiskSize, uncompressedSize, isResource: false };
 }
 
 // RPF からファイルデータを抽出
@@ -62,10 +67,13 @@ function extractFileData(
   const { byteOffset, compressedSize, uncompressedSize, isResource } = info;
 
   if (isResource) {
-    // リソースファイル: RSC7ヘッダー + 圧縮データをそのまま返す
-    // サイズは展開後のサイズを使う（ディスク上のサイズは不明なので範囲チェック緩め）
-    const end = Math.min(byteOffset + uncompressedSize, rpfData.length);
+    // リソースファイル: ディスク上の実サイズ(FileSize)ぶんちょうどを返す。
+    // これが「RSC7ヘッダー + deflate圧縮データ」= 単体リソースファイルそのもの。
+    // 展開後サイズで読むと末尾に隣ファイルのデータが混入し、RAGE のローダーが
+    // deflate ストリーム破損として扱いクラッシュするため必ず実サイズで切る。
     if (byteOffset >= rpfData.length) return null;
+    const diskSize = compressedSize > 0 ? compressedSize : uncompressedSize;
+    const end = Math.min(byteOffset + diskSize, rpfData.length);
     return rpfData.subarray(byteOffset, end);
   }
 
