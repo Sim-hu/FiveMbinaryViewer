@@ -114,7 +114,10 @@ export function RPFViewer({ data, fileName }: RPFViewerProps) {
         zipInput[`${resource.rootName}/${file.resourcePath}`] = file.data;
       }
 
-      downloadZip(zipInput, `${resource.rootName}_fivem_resource.zip`);
+      const downloadName = resource.isVehicle
+        ? `${resource.rootName}.zip`
+        : `${resource.rootName}_fivem_resource.zip`;
+      downloadZip(zipInput, downloadName);
     } catch (e) {
       console.error("FiveM resource creation failed:", e);
     } finally {

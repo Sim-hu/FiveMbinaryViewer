@@ -46,13 +46,13 @@ export interface FiveMResourceBuildResult {
   rootName: string;
   files: FiveMResourceFile[];
   manifest: string;
+  isVehicle: boolean;
 }
 
 export function buildFiveMResourceFiles(
   sourceFiles: Map<string, Uint8Array>,
   sourceFileName: string,
 ): FiveMResourceBuildResult {
-  const rootName = sanitizeResourceName(sourceFileName.replace(/\.rpf$/i, ""));
   const files: FiveMResourceFile[] = [];
   const usedResourcePaths = new Set<string>();
 
@@ -74,11 +74,57 @@ export function buildFiveMResourceFiles(
 
   files.sort((a, b) => a.resourcePath.localeCompare(b.resourcePath));
 
+  // 車両リソースの場合は車両モデル名 (例: 23rc390) をリソース名として使う
+  const isVehicle = isVehicleResource(files);
+  const vehicleName = isVehicle ? detectVehicleModelName(files) : null;
+  const rootName =
+    vehicleName ?? sanitizeResourceName(sourceFileName.replace(/\.rpf$/i, ""));
+
   return {
     rootName,
     files,
     manifest: createFxManifest(files),
+    isVehicle,
   };
+}
+
+function isVehicleResource(files: FiveMResourceFile[]): boolean {
+  return files.some(
+    (file) =>
+      /(^|\/)(vehicles|handling|carcols|carvariations)\.meta$/i.test(
+        file.resourcePath,
+      ) || /(^|\/)vehicles\.meta$/i.test(file.sourcePath),
+  );
+}
+
+// stream 内の .yft 名から車両モデル名を推定する (例: 23rc390.yft → 23rc390)
+function detectVehicleModelName(files: FiveMResourceFile[]): string | null {
+  const counts = new Map<string, number>();
+
+  for (const file of files) {
+    if (getExtension(file.resourcePath) !== "yft") continue;
+    const base = getBaseName(file.resourcePath).replace(/\.yft$/i, "");
+    // 高ディテール／変種サフィックスを除去 (_hi, +hi, _hi など)
+    const model = base.replace(/[_+]hi$/i, "").trim();
+    if (!model) continue;
+    counts.set(model, (counts.get(model) ?? 0) + 1);
+  }
+
+  if (counts.size === 0) return null;
+
+  let bestName: string | null = null;
+  let bestCount = -1;
+  for (const [name, count] of counts) {
+    if (
+      count > bestCount ||
+      (count === bestCount && bestName !== null && name.length < bestName.length)
+    ) {
+      bestName = name;
+      bestCount = count;
+    }
+  }
+
+  return bestName ? sanitizeResourceName(bestName) : null;
 }
 
 function sanitizeResourceName(name: string): string {
