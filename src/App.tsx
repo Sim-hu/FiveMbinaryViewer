@@ -148,6 +148,9 @@ function App() {
           <span className="text-sm font-normal text-gray-500 ml-3">
             {hasData ? TITLES[fileType] : "GTA V / FiveM"}
           </span>
+          <span className="text-xs font-normal text-gray-600 ml-2">
+            v{__APP_VERSION__}
+          </span>
         </h1>
 
         <DropZone onFileSelect={handleFileSelect} disabled={loading} />
