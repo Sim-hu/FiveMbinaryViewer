@@ -21,6 +21,12 @@ const EXCLUDED_EXTENSIONS = new Set([
   "gxt2",
 ]);
 
+// DLC パッケージ記述子。FiveM リソースでは不要で、混入するとマウントが壊れる
+const EXCLUDED_FILENAMES = new Set([
+  "content.xml",
+  "setup2.xml",
+]);
+
 const META_DATA_FILE_TYPES: Array<{ pattern: RegExp; type: string }> = [
   { pattern: /(^|\/)handling\.meta$/i, type: "HANDLING_FILE" },
   { pattern: /(^|\/)vehicles\.meta$/i, type: "VEHICLE_METADATA_FILE" },
@@ -148,18 +154,22 @@ function normalizeArchivePath(path: string): string {
 }
 
 function shouldExcludeFromResource(path: string): boolean {
-  return EXCLUDED_EXTENSIONS.has(getExtension(path));
+  return (
+    EXCLUDED_EXTENSIONS.has(getExtension(path)) ||
+    EXCLUDED_FILENAMES.has(getBaseName(path).toLowerCase())
+  );
 }
 
+// FiveM リソースは stream/ と data/ のフラット構造を取る。
+// DLC RPF の common/data/... や dlc/... といった深いパスは basename に
+// 平坦化し、data/common/data/... のようなネストを作らない。
 function getFiveMResourcePath(path: string): string {
-  const first = path.toLowerCase().split("/")[0];
   const ext = getExtension(path);
+  const base = getBaseName(path);
 
-  if (STREAM_EXTENSIONS.has(ext)) return `stream/${getBaseName(path)}`;
-  if (first === "data") return path;
-  if (DATA_EXTENSIONS.has(ext)) return `data/${path}`;
-  if (first === "stream") return `stream/${getBaseName(path)}`;
-  return `stream/${getBaseName(path)}`;
+  if (STREAM_EXTENSIONS.has(ext)) return `stream/${base}`;
+  if (DATA_EXTENSIONS.has(ext)) return `data/${base}`;
+  return `stream/${base}`;
 }
 
 function getUniqueResourcePath(path: string, usedPaths: Set<string>): string {
