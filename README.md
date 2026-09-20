@@ -65,13 +65,17 @@ RPF ビューアの `Download FiveM Resource` ボタンから、FiveM にその�
 resource_name/
 ├── stream/
 ├── data/
+├── audio/            (音声メタがある場合)
+├── sfx/dlc_xxx/      (.awc がある場合)
+├── client/           (gxt2 がある場合)
 └── fxmanifest.lua
 ```
 
 - `.ytd` / `.ydr` / `.ybn` / `.ymap` / `.ytyp` などのストリーミングアセットは、元の `x64/` などの階層を外して `stream/` 直下に配置
-- `.meta` / `.xml` / `.dat` / `.rel` / `.ymt` は `data/` に配置
+- `.meta` / `.xml` / `.dat` / `.ymt` は `data/` に配置
 - `handling.meta` / `vehicles.meta` / `carcols.meta` / `carvariations.meta` / `.ytyp` などは `fxmanifest.lua` に代表的な `data_file` 宣言を自動追加
-- FiveM リソースとしてそのまま読み込まれない `global.gxt2` などの `.gxt2` ファイルは除外
+- 音声は `.rel` を `audio/`、`.awc` を元の wavepack フォルダ名を保ったまま `sfx/dlc_xxx/` に配置し、`AUDIO_GAMEDATA` / `AUDIO_SOUNDDATA` / `AUDIO_SYNTHDATA` / `AUDIO_DYNAMIXDATA` / `AUDIO_WAVEPACK` を自動追加（`.awc` は `stream/` に置いても鳴らない）
+- FiveM が読まない `global.gxt2` はそのままは入れず、`AddTextEntry` を並べた `client/<resource>_labels.lua` に変換して `client_scripts` に登録。キーはハッシュなので `carcols.meta` の `modShopLabel` などと突き合わせてラベル名を復元し、復元できないものは `AddTextEntryByHash` で出力（言語は `americandlc.rpf` を優先）
 
 ## ライセンス
 

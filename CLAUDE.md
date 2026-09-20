@@ -47,6 +47,8 @@ src/lib/        バイナリ解析
   texture-dict.ts TextureDictionary パーサー (YTD)
   dds-decode.ts   BCn テクスチャデコーダー (BC1-BC7 + 非圧縮)
   rpf-parser.ts   RPF7 パーサー（24-bit フィールド解析、リソース/バイナリ判別）
+  gxt2-parser.ts  GXT2 テキストテーブルパーサー + joaat ハッシュ
+  fivem-resource.ts RPF → FiveM リソース変換（stream/data/audio/sfx 振り分け、fxmanifest、gxt2 → AddTextEntry Lua）
   ymap-parser.ts  YMAP パーサー (XML + PSO パターンスキャン)
   ytyp-parser.ts  YTYP パーサー (XML)
   ydr-parser.ts   YDR Drawable パーサー
